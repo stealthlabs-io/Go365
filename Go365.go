@@ -37,7 +37,7 @@ var (
 )
 
 const (
-	version = "1.4"
+	version = "1.4.1"
 	tool    = "Go365"
 	authors = "h0useh3ad, paveway3, S4R1N, EatonChips"
 	usage   = `Usage:
