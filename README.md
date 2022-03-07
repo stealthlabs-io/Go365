@@ -26,7 +26,7 @@ go get -u github.com/optiv/Go365
 
 #### Option 1
 
-Download a pre-compiled binary for your OS [HERE](https://github.com/optiv/Go365/releases).
+Download a pre-compiled binary for your OS [HERE](https://github.com/stealthlabs-io/Go365/releases).
 
 #### Option 2
 
